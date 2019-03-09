@@ -14,22 +14,21 @@ function main() {
 	.option('-r, --require <module>', 'preload a module', collect, [])
 	.parse(process.argv)
 
-    let src = cmd.args.length ? cmd.args[0] : '/dev/stdin'
+    let src = cmd.args[0] || '/dev/stdin'
     let sandbox = {
+	$: parse(src),
 	p: console.log.bind(console),
 	puts,
-	$: parse(src)
     }
-    cmd.require.forEach( v => sandbox[v] = require(v)) // preload modules
+    Object.assign(sandbox, preload(cmd.require)) // additional modules
 
     if (cmd.eval) {
 	let r = evaluate(cmd.eval, sandbox)
-	if (cmd.print) {
-	    console.log(r)
-	    if (r == null) process.exitCode = 1
-	}
-    } else
+	if (cmd.print) console.log(r)
+    } else {
+	if (src === '/dev/stdin') err('repl mode requires a file argument')
 	irb(sandbox)
+    }
 }
 
 function parse(input) {
@@ -40,7 +39,18 @@ function parse(input) {
     }
 }
 
-function err(...msg) { console.error(...msg); process.exit(2); }
+function err(...msg) { console.error(...msg); process.exit(1); }
+
+function preload(list) {
+    return list.reduce( (acc, cur) => {
+	try {
+	    acc[cur] = require(cur)
+	} catch (e) {
+	    err('preloading module failed:', e.message)
+	}
+	return acc
+    }, {})
+}
 
 function puts(str) { process.stdout.write(String(str)); }
 
@@ -50,5 +60,11 @@ function evaluate(str, sandbox) {
     return vm.runInContext(str, sandbox)
 }
 
+function irb(sandbox) {
+    let repl = require('repl')
+    console.error('Your document should be available via $')
+    let r = repl.start('> ')
+    Object.assign(r.context, sandbox)
+}
 
 main()
