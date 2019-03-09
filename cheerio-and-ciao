@@ -1,0 +1,54 @@
+#!/usr/bin/env node
+
+let fs = require('fs')
+let meta = require('./package.json')
+let cmd = require('commander')
+let cheerio = require('cheerio')
+
+function main() {
+    let collect = (val, memo) => { memo.push(val); return memo; }
+    cmd.version(meta.version)
+        .usage('[options] [file.html]')
+	.option('-e, --eval <code>', 'JS')
+	.option('-p, --print', 'automatically console.log the result form -e')
+	.option('-r, --require <module>', 'preload a module', collect, [])
+	.parse(process.argv)
+
+    let src = cmd.args.length ? cmd.args[0] : '/dev/stdin'
+    let sandbox = {
+	p: console.log.bind(console),
+	puts,
+	$: parse(src)
+    }
+    cmd.require.forEach( v => sandbox[v] = require(v)) // preload modules
+
+    if (cmd.eval) {
+	let r = evaluate(cmd.eval, sandbox)
+	if (cmd.print) {
+	    console.log(r)
+	    if (r == null) process.exitCode = 1
+	}
+    } else
+	irb(sandbox)
+}
+
+function parse(input) {
+    try {
+	return cheerio.load(fs.readFileSync(input))
+    } catch (e) {
+	err('failed to load html:', e.message)
+    }
+}
+
+function err(...msg) { console.error(...msg); process.exit(2); }
+
+function puts(str) { process.stdout.write(String(str)); }
+
+function evaluate(str, sandbox) {
+    let vm = require('vm')
+    vm.createContext(sandbox)
+    return vm.runInContext(str, sandbox)
+}
+
+
+main()
