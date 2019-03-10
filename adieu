@@ -5,7 +5,7 @@ let meta = require('./package.json')
 let cmd = require('commander')
 let cheerio = require('cheerio')
 
-async function main() {
+function main() {
     let collect = (val, memo) => { memo.push(val); return memo; }
     cmd.version(meta.version)
         .usage('[options] [file.html | URL]')
@@ -15,20 +15,24 @@ async function main() {
 	.parse(process.argv)
 
     let src = cmd.args[0] || '/dev/stdin'
-    let sandbox = {
-	$: await parse(src).catch(err),
-	p: console.log.bind(console),
-	puts,
-    }
-    Object.assign(sandbox, await preload(cmd.require).catch(err))
+    parse(src).then( $ => {
+	let sandbox = {
+	    p: console.log.bind(console),
+	    puts, $
+	}
+	Object.assign(sandbox, preload(cmd.require)) // modules
+	return sandbox
 
-    if (cmd.eval) {
-	let r = evaluate(cmd.eval, sandbox)
-	if (cmd.print) console.log(r)
-    } else {
-	if (src === '/dev/stdin') err('repl mode requires a file argument')
-	irb(sandbox)
-    }
+    }).then( sandbox => {
+	if (cmd.eval) {
+	    let r = evaluate(cmd.eval, sandbox)
+	    if (cmd.print) console.log(r)
+	} else {
+	    if (src === '/dev/stdin')
+		throw new Error('repl mode requires a file argument')
+	    irb(sandbox)
+	}
+    }).catch(err)
 }
 
 async function parse(input) {
@@ -40,14 +44,14 @@ async function parse(input) {
     return cheerio.load(await html)
 }
 
-function err(...msg) {
+function err(msg) {
     let path = require('path')
     console.error(path.basename(process.argv[1]), 'error:',
-		  ...msg.map( v => v instanceof Error ? v.message : v))
+		  msg instanceof Error ? msg.message : msg)
     process.exit(1)
 }
 
-async function preload(list) {
+function preload(list) {
     let varname = s => s.replace(/[^\w]/g, '_')
     return list.reduce( (acc, cur) => {
 	acc[varname(cur)] = require(cur)
