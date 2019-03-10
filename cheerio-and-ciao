@@ -20,7 +20,7 @@ async function main() {
 	p: console.log.bind(console),
 	puts,
     }
-    Object.assign(sandbox, preload(cmd.require)) // additional modules
+    Object.assign(sandbox, await preload(cmd.require).catch(err))
 
     if (cmd.eval) {
 	let r = evaluate(cmd.eval, sandbox)
@@ -47,13 +47,10 @@ function err(...msg) {
     process.exit(1)
 }
 
-function preload(list) {
+async function preload(list) {
+    let varname = s => s.replace(/[^\w]/g, '_')
     return list.reduce( (acc, cur) => {
-	try {
-	    acc[cur] = require(cur)
-	} catch (e) {
-	    err('preloading module failed:', e.message)
-	}
+	acc[varname(cur)] = require(cur)
 	return acc
     }, {})
 }
