@@ -5,10 +5,10 @@ let meta = require('./package.json')
 let cmd = require('commander')
 let cheerio = require('cheerio')
 
-function main() {
+async function main() {
     let collect = (val, memo) => { memo.push(val); return memo; }
     cmd.version(meta.version)
-        .usage('[options] [file.html]')
+        .usage('[options] [file.html | URL]')
 	.option('-e, --eval <code>', 'JS')
 	.option('-p, --print', 'automatically console.log the result form -e')
 	.option('-r, --require <module>', 'preload a module', collect, [])
@@ -16,7 +16,7 @@ function main() {
 
     let src = cmd.args[0] || '/dev/stdin'
     let sandbox = {
-	$: parse(src),
+	$: await parse(src).catch(err),
 	p: console.log.bind(console),
 	puts,
     }
@@ -31,15 +31,21 @@ function main() {
     }
 }
 
-function parse(input) {
-    try {
-	return cheerio.load(fs.readFileSync(input))
-    } catch (e) {
-	err('failed to load html:', e.message)
-    }
+async function parse(input) {
+    let fetch = async input => { new URL(input); return my_fetch(input); }
+    let html = fetch(input).catch( e => {
+	if (e instanceof TypeError) return fs.readFileSync(input)
+	throw e
+    })
+    return cheerio.load(await html)
 }
 
-function err(...msg) { console.error(...msg); process.exit(1); }
+function err(...msg) {
+    let path = require('path')
+    console.error(path.basename(process.argv[1]), 'error:',
+		  ...msg.map( v => v instanceof Error ? v.message : v))
+    process.exit(1)
+}
 
 function preload(list) {
     return list.reduce( (acc, cur) => {
@@ -65,6 +71,14 @@ function irb(sandbox) {
     console.error('Your document should be available via $')
     let r = repl.start('> ')
     Object.assign(r.context, sandbox)
+}
+
+function my_fetch(url, opt) {
+    let fetcherr = r => {
+	if (!r.ok) throw new Error(r.status)
+	return r
+    }
+    return require('node-fetch')(url, opt).then(fetcherr).then( r => r.text())
 }
 
 main()
