@@ -1,7 +1,24 @@
 {
-  "dependencies": {
-    "cheerio": "^1.0.0-rc.2",
-    "commander": "^2.19.0",
-    "node-fetch": "^2.3.0"
-  }
+    "dependencies": {
+        "cheerio": "^1.0.0-rc.2",
+        "commander": "^2.19.0",
+        "node-fetch": "^2.3.0"
+    },
+    "name": "adieu",
+    "version": "0.0.1",
+    "author": "Alexander Gromnitsky",
+    "license": "MIT",
+    "repository": "github:gromnitsky/adieu",
+    "files": [
+        "adieu"
+    ],
+    "bin": {
+        "adieu": "./adieu"
+    },
+    "description": "A command line interface to cheerio library; vaguely similar to nokogiri",
+    "keywords": [
+        "nokogiri",
+        "css selectors",
+        "cheerio"
+    ]
 }
