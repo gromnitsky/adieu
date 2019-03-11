@@ -43,11 +43,12 @@ Your document should be available via $
 
 ## Helpers
 
-| name   | desc                                                        |
-| ------ | ----------------------------------------------------------- |
-| `$`    | a cheerio instance w/ the loaded document                   |
-| `p`    | alias to `console.log`                                      |
-| `puts` | convert an arg to a string & write the result to the stdout |
+| name      | desc                                                        |
+| --------- | ----------------------------------------------------------- |
+| `cheerio` |                                                             |
+| `$`       | a cheerio instance w/ the loaded document                   |
+| `p`       | alias to `console.log`                                      |
+| `puts`    | convert an arg to a string & write the result to the stdout |
 
 
 ## License

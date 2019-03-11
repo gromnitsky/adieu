@@ -19,7 +19,7 @@ function main() {
     parse(src).then( $ => {
 	let sandbox = {
 	    p: console.log.bind(console),
-	    puts, $
+	    puts, $, cheerio
 	}
 	Object.assign(sandbox, preload(cmd.require)) // modules
 	return sandbox
