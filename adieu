@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 let fs = require('fs')
+let path = require('path')
 let meta = require('./package.json')
 let cmd = require('commander')
 let cheerio = require('cheerio')
@@ -29,7 +30,7 @@ function main() {
 	    if (cmd.print) console.log(r)
 	} else {
 	    if (src === '/dev/stdin')
-		throw new Error('repl mode requires a file argument')
+		throw new Error('repl mode requires a file/url argument')
 	    irb(sandbox)
 	}
     }).catch(err)
@@ -44,10 +45,8 @@ async function parse(input) {
     return cheerio.load(await html)
 }
 
-function err(msg) {
-    let path = require('path')
-    console.error(path.basename(process.argv[1]), 'error:',
-		  msg instanceof Error ? msg.message : msg)
+function err(s) {
+    console.error(progname(), 'error:', s instanceof Error ? s.message : s)
     process.exit(1)
 }
 
@@ -72,6 +71,12 @@ function irb(sandbox) {
     console.error('Your document should be available via $')
     let r = repl.start('> ')
     Object.assign(r.context, sandbox)
+    if (r.setupHistory) {	// since node 11.10.0
+	let xdg = require('xdg-basedir')
+	let file = path.join(xdg.cache, progname(), 'history')
+	fs.mkdirSync(path.dirname(file), {recursive: true})
+	r.setupHistory(file, () => {})
+    }
 }
 
 function my_fetch(url, opt) {
@@ -81,5 +86,7 @@ function my_fetch(url, opt) {
     }
     return require('node-fetch')(url, opt).then(fetcherr).then( r => r.text())
 }
+
+function progname() { return path.basename(process.argv[1]); }
 
 main()
