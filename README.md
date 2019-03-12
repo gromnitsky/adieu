@@ -14,6 +14,7 @@ Options:
   -e, --eval <code>       JS
   -p, --print             automatically console.log the result form -e
   -r, --require <module>  preload a module (default: [])
+  -R, --raw               don't simplify printouts of cheerio/dom objects
   -h, --help              output usage information
 ~~~
 
