@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+'use strict'
+
 let fs = require('fs')
 let path = require('path')
 let meta = require('./package.json')
@@ -13,6 +15,7 @@ function main() {
 	.option('-e, --eval <code>', 'JS')
 	.option('-p, --print', 'automatically console.log the result form -e')
 	.option('-r, --require <module>', 'preload a module', collect, [])
+	.option('-R, --raw', "don't prettify cheerio objects")
 	.parse(process.argv)
 
     let src = cmd.args[0] || '/dev/stdin'
@@ -25,6 +28,8 @@ function main() {
 	return sandbox
 
     }).then( sandbox => {
+	if (!cmd.raw) prettify()
+
 	if (cmd.eval) {
 	    let r = evaluate(cmd.eval, sandbox)
 	    if (cmd.print) console.log(r)
@@ -58,7 +63,33 @@ function preload(list) {
     }, {})
 }
 
-function puts(str) { process.stdout.write(String(str)); }
+function puts(str) { process.stdout.write(String(str) + "\n"); }
+
+function prettify() {
+    let util = require('util')
+
+    let simplify = node => {
+	let compact = node => {
+	    if (!node) return null
+	    return obj_filter(node, ['type', 'name'])
+	}
+	return Object.assign(compact(node), {
+	    attribs: Object.assign({}, node.attribs),
+	    children: node.children.length,
+	    parent: compact(node.parent),
+	    prev: compact(node.prev),
+	    next: compact(node.next),
+	})
+    }
+
+    cheerio.prototype[util.inspect.custom] = function() {
+	let keys = Object.keys(this).filter( k => !isNaN(Number(k)))
+	let nodes = keys.map( k => simplify(this[k]))
+	let o = obj_zip(keys, nodes)
+	if (this.length != null) o.length = this.length
+	return o
+    }
+}
 
 function evaluate(str, sandbox) {
     let vm = require('vm')
@@ -88,5 +119,13 @@ function my_fetch(url, opt) {
 }
 
 function progname() { return path.basename(process.argv[1]); }
+
+function obj_filter(obj, keys) {
+    return keys.reduce( (a, c) => { if (obj[c]) a[c] = obj[c]; return a }, {})
+}
+
+function obj_zip(keys, values) {
+    return keys.reduce( (a, c) => { a[c] = values[c]; return a}, {})
+}
 
 main()
