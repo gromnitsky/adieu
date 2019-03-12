@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 'use strict'
 
 let fs = require('fs')
@@ -11,11 +10,11 @@ let cheerio = require('cheerio')
 function main() {
     let collect = (val, memo) => { memo.push(val); return memo; }
     cmd.version(meta.version)
-        .usage('[options] [file.html | URL]')
+	.usage('[options] [file.html | URL]')
 	.option('-e, --eval <code>', 'JS')
 	.option('-p, --print', 'automatically console.log the result form -e')
 	.option('-r, --require <module>', 'preload a module', collect, [])
-	.option('-R, --raw', "don't prettify cheerio/Node objects")
+	.option('-R, --raw', "don't simplify printouts of cheerio/dom objects")
 	.parse(process.argv)
 
     let src = cmd.args[0] || '/dev/stdin'
@@ -28,7 +27,7 @@ function main() {
 	return sandbox
 
     }).then( sandbox => {
-	if (!cmd.raw) prettify()
+	if (!cmd.raw) simplify()
 
 	if (cmd.eval) {
 	    let r = evaluate(cmd.eval, sandbox)
@@ -42,7 +41,7 @@ function main() {
 }
 
 async function parse(input) {
-    let fetch = async input => { new URL(input); return my_fetch(input); }
+    let fetch = async input => { new URL(input); return fetch_text(input); }
     let html = fetch(input).catch( e => {
 	if (e instanceof TypeError) return fs.readFileSync(input)
 	throw e
@@ -57,15 +56,12 @@ function err(s) {
 
 function preload(list) {
     let varname = s => s.replace(/[^\w]/g, '_')
-    return list.reduce( (acc, cur) => {
-	acc[varname(cur)] = require(cur)
-	return acc
-    }, {})
+    return list.reduce( (a, c) => { a[varname(c)] = require(c); return a; }, {})
 }
 
 function puts(str) { process.stdout.write(String(str) + "\n"); }
 
-function prettify() {
+function simplify() {
     let util = require('util')
     let adapter = require('parse5/lib/tree_adapters/htmlparser2')
     let comment = adapter.createCommentNode('ALL PRAISE JAVASCRIPT!')
@@ -83,10 +79,9 @@ function prettify() {
     }
 
     cheerio.prototype[util.inspect.custom] = function() {
-	let keys = Object.keys(this).filter( k => !isNaN(Number(k)))
-	let o = obj_zip(keys, this)
-	if (this.length != null) o.length = this.length
-	return o
+	let keys = Object.keys(this)
+	    .filter( k => k === 'length' || !isNaN(Number(k)))
+	return obj_zip(keys, this)
     }
 }
 
@@ -109,7 +104,7 @@ function irb(sandbox) {
     }
 }
 
-function my_fetch(url, opt) {
+function fetch_text(url, opt) {
     let fetcherr = r => {
 	if (!r.ok) throw new Error(r.status)
 	return r
