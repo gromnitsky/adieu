@@ -27,7 +27,7 @@ function main() {
 	return sandbox
 
     }).then( sandbox => {
-	if (!cmd.raw) simplify()
+	if (!cmd.raw) simplify(sandbox.$)
 
 	if (cmd.eval) {
 	    let r = evaluate(cmd.eval, sandbox)
@@ -61,17 +61,22 @@ function preload(list) {
 
 function puts(str) { process.stdout.write(String(str) + "\n"); }
 
-function simplify() {
+function simplify($) {
     let util = require('util')
-    let adapter = require('parse5/lib/tree_adapters/htmlparser2')
+    let adapter = require('parse5/lib/tree_adapters/htmlparser2') // FIXME
     let comment = adapter.createCommentNode('ALL PRAISE JAVASCRIPT!')
     let node_proto = Object.getPrototypeOf(comment)
+    let html = nodes => {
+	let r = $(nodes).toString().replace(/\s+/g, ' ').trim()
+	let max = process.stdout.isTTY ? process.stdout.columns-25 : 55
+	return r.length <= max ? r : r.slice(0, max) + '…'
+    }
 
     node_proto[util.inspect.custom] = function() {
 	let compact = n => n ? obj_filter(n, ['type', 'name']) : null
 	return Object.assign(compact(this), {
 	    attribs: Object.assign({}, this.attribs),
-	    children: this.children.length,
+	    inner_html: html(this.children),
 	    parent: compact(this.parent),
 	    prev: compact(this.prev),
 	    next: compact(this.next),
