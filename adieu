@@ -17,7 +17,7 @@ function main() {
 	.option('-R, --raw', "don't simplify printouts of cheerio/dom objects")
 	.parse(process.argv)
 
-    let src = cmd.args[0] || '/dev/stdin'
+    let src = cmd.args[0]
     parse(src).then( $ => {
 	let sandbox = {
 	    p: console.log.bind(console),
@@ -33,8 +33,7 @@ function main() {
 	    let r = evaluate(cmd.eval, sandbox)
 	    if (cmd.print) console.log(r)
 	} else {
-	    if (src === '/dev/stdin')
-		throw new Error('repl mode requires a file/url argument')
+	    if (!src) throw new Error('repl mode requires a file/url argument')
 	    irb(sandbox)
 	}
     }).catch(err)
@@ -43,10 +42,20 @@ function main() {
 async function parse(input) {
     let fetch = async input => { new URL(input); return fetch_text(input); }
     let html = fetch(input).catch( e => {
-	if (e instanceof TypeError) return fs.readFileSync(input)
+	if (e instanceof TypeError) return read(input)
 	throw e
     })
     return cheerio.load(await html)
+}
+
+function read(file) {
+    let stream = file ? fs.createReadStream(file) : process.stdin
+    let data = []
+    return new Promise( (resolve, reject) => {
+	stream.on('error', reject)
+	stream.on('data', chunk => data.push(chunk))
+	stream.on('end', () => resolve(data.join``))
+    })
 }
 
 function err(s) {
