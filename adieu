@@ -8,7 +8,7 @@ let cmd = require('commander')
 let cheerio = require('cheerio')
 
 function main() {
-    let collect = (val, memo) => { memo.push(val); return memo; }
+    let collect = (val, memo) => (memo.push(val), memo)
     cmd.version(meta.version)
 	.usage('[options] [file.html | URL]')
 	.option('-e, --eval <code>', 'JS')
@@ -19,12 +19,10 @@ function main() {
 
     let src = cmd.args[0]
     parse(src).then( $ => {
-	let sandbox = {
+	return Object.assign({	// a sandbox w/ modules
 	    p: console.log.bind(console),
 	    puts, $, cheerio
-	}
-	Object.assign(sandbox, preload(cmd.require)) // modules
-	return sandbox
+	}, preload(cmd.require))
 
     }).then( sandbox => {
 	if (!cmd.raw) simplify(sandbox.$)
@@ -40,7 +38,7 @@ function main() {
 }
 
 async function parse(input) {
-    let fetch = async input => { new URL(input); return fetch_text(input); }
+    let fetch = async input => (new URL(input), fetch_text(input))
     let html = fetch(input).catch( e => {
 	if (e instanceof TypeError) return read(input)
 	throw e
@@ -65,7 +63,7 @@ function err(s) {
 
 function preload(list) {
     let varname = s => s.replace(/[^\w]/g, '_')
-    return list.reduce( (a, c) => { a[varname(c)] = require(c); return a; }, {})
+    return list.reduce( (a, c) => (a[varname(c)] = require(c), a), {})
 }
 
 function puts(str) { process.stdout.write(String(str) + "\n"); }
@@ -108,7 +106,7 @@ function evaluate(str, sandbox) {
 function irb(sandbox) {
     let repl = require('repl')
     console.error('Your document should be available via $')
-    let r = repl.start('> ')
+    let r = repl.start()
     Object.assign(r.context, sandbox)
     if (r.setupHistory) {	// since node 11.10.0
 	let xdg = require('xdg-basedir')
@@ -119,10 +117,7 @@ function irb(sandbox) {
 }
 
 function fetch_text(url, opt) {
-    let fetcherr = r => {
-	if (!r.ok) throw new Error(r.status)
-	return r
-    }
+    let fetcherr = r => { if (r.ok) return r; throw new Error(r.status) }
     return require('node-fetch')(url, opt).then(fetcherr).then( r => r.text())
 }
 
@@ -133,7 +128,7 @@ function obj_filter(obj, keys) {
 }
 
 function obj_zip(keys, values) {
-    return keys.reduce( (a, c) => { a[c] = values[c]; return a}, {})
+    return keys.reduce( (a, c) => (a[c] = values[c], a), {})
 }
 
 main()
