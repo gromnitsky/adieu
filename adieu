@@ -79,21 +79,24 @@ function simplify($) {
 	return r.length <= max ? r : r.slice(0, max) + '…'
     }
 
-    node_proto[util.inspect.custom] = function() {
+    let tag = (o, name, ctx) => Object.defineProperty(o, Symbol.toStringTag, { get() { return ctx.stylize(name, 'special') } })
+
+    node_proto[util.inspect.custom] = function(_, ctx) {
 	let compact = n => n ? obj_filter(n, ['type', 'name']) : null
-	return Object.assign(compact(this), {
+	let r = Object.assign(compact(this), {
 	    attribs: Object.assign({}, this.attribs),
-	    inner_html: html(this.children),
+	    '[inner_html]': html(this.children),
 	    parent: compact(this.parent),
 	    prev: compact(this.prev),
 	    next: compact(this.next),
 	})
+	return tag(r, 'Node', ctx)
     }
 
-    cheerio.prototype[util.inspect.custom] = function() {
+    cheerio.prototype[util.inspect.custom] = function(_, ctx) {
 	let keys = Object.keys(this)
 	    .filter( k => k === 'length' || !isNaN(Number(k)))
-	return obj_zip(keys, this)
+	return tag(obj_zip(keys, this), 'Cheerio', ctx)
     }
 }
 
