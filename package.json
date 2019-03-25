@@ -6,7 +6,7 @@
         "xdg-basedir": "^3.0.0"
     },
     "name": "adieu",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "author": "Alexander Gromnitsky",
     "license": "MIT",
     "repository": "github:gromnitsky/adieu",
