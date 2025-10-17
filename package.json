@@ -1,11 +1,10 @@
 {
     "dependencies": {
         "cheerio": "^1.1.2",
-        "commander": "^2.20.1",
-        "xdg-basedir": "^3.0.0"
+        "xdg-basedir": "^5.1.0"
     },
     "name": "adieu",
-    "version": "0.0.6",
+    "version": "1.0.0",
     "author": "Alexander Gromnitsky",
     "license": "MIT",
     "repository": "github:gromnitsky/adieu",

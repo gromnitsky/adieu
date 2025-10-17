@@ -3,48 +3,61 @@
 
 let fs = require('fs')
 let path = require('path')
+let util = require('util')
 let meta = require('./package.json')
-let cmd = require('commander')
 let cheerio = require('cheerio')
 
-function main() {
-    let collect = (val, memo) => (memo.push(val), memo)
-    cmd.version(meta.version)
-	.usage('[options] [file.html | URL]')
-	.option('-e, --eval <code>', 'JavaScript')
-	.option('-p, --print', 'automatically console.log results from -e')
-	.option('-r, --require <module>', 'preload a module', collect, [])
-	.option('-R, --raw', "don't simplify cheerio objects printouts")
-	.parse(process.argv)
+// (1) if no args, print usage
+// (2) if no -e, start repl
+// (3) if -e, load a file or stdin
+async function main() {
+    let options = {
+        e: { type: 'string' },
+        p: { type: 'boolean' },
+        r: { type: 'string', multiple: true, default: [] },
+        R: { type: 'boolean' },
+        V: { type: 'boolean' },
+    }
+    let params; try {
+        params = util.parseArgs({ options, allowPositionals: true })
+    } catch (e) {
+        console.error(e.message)
+        await usage()
+    }
 
-    let src = cmd.args[0]
-    parse(src).then( $ => {
-	return Object.assign({	// a sandbox w/ modules
-	    p: console.log.bind(console),
-	    puts, $, cheerio, process, require
-	}, preload(cmd.require))
+    if (params.values.V) { console.log(meta.version); process.exit(0) }
 
-    }).then( sandbox => {
-	if (!cmd.raw) simplify(sandbox.$)
+    let load = () => {
+        return load_html(params.positionals[0]).then( html => {
+            return cheerio.load(html, {xml: {xmlMode: false}})
+        }).then( $ => {
+            if (!params.values.R) simplify($)
+            return $
+        })
+    }
 
-	if (cmd.eval) {
-	    let r = evaluate(cmd.eval, sandbox)
-	    if (cmd.print) console.log(r)
-	} else {
-	    if (!src) throw new Error('repl mode requires a file/url argument')
-	    irb(sandbox)
-	}
-    }).catch(err)
+    let sandbox = $ => {
+        return Object.assign({
+            p: console.log.bind(console),
+            puts, $, cheerio
+        }, preload(params.values.r))
+    }
+
+    if (params.values.e == null) {
+        if (!params.positionals.length) await usage()      // (1)
+        load().then( $ => { irb(sandbox($)) }).catch(errx) // (2)
+
+    } else {
+        load().then( $ => {                                // (3)
+            let r = evaluate(params.values.e, sandbox($))
+            if (params.values.p) console.log(r)
+        }).catch(errx)
+    }
 }
 
-async function parse(input) {
-    let fetch = async input => (new URL(input), fetch_text(input))
-    let html = fetch(input).catch( e => {
-	if (e instanceof TypeError) return read(input)
-	throw e
-    })
-    // use htmlparser2 as in cheerio 1.0.0-rc.3
-    return cheerio.load(await html, {xml: {xmlMode: false}})
+async function usage() {
+    console.error((await read(__dirname + '/usage.txt')).toString().trim())
+    process.exit(1)
 }
 
 function read(file) {
@@ -57,8 +70,14 @@ function read(file) {
     })
 }
 
-function err(s) {
-    console.error(progname(), 'error:', s instanceof Error ? s.message : s)
+function load_html(file) {
+    if (/^https?:\/\//.test((file||'').trim())) return fetch_text(file)
+    return read(file)
+}
+
+function errx(...s) {
+    if (!process.env.V) s = s.map( v => v instanceof Error ? v.message : v)
+    console.error(meta.name, 'error:', ...s)
     process.exit(1)
 }
 
@@ -70,7 +89,6 @@ function preload(list) {
 function puts(str) { process.stdout.write(String(str) + "\n"); }
 
 function simplify($) {
-    let util = require('util')
     let html = nodes => {
 	let r = $(nodes).toString().replace(/\s+/g, ' ').trim()
 	let max = process.stdout.isTTY ? process.stdout.columns-25 : 55
@@ -116,12 +134,12 @@ function evaluate(str, sandbox) {
 
 function irb(sandbox) {
     let repl = require('repl')
-    console.error('Your document should be available via $')
+    console.error('Your document is stored in $')
     let r = repl.start()
     Object.assign(r.context, sandbox)
     if (r.setupHistory) {	// since node 11.10.0
 	let xdg = require('xdg-basedir')
-	let file = path.join(xdg.cache, progname(), 'history')
+        let file = path.join(xdg.xdgCache, meta.name, 'history')
 	fs.mkdirSync(path.dirname(file), {recursive: true})
 	r.setupHistory(file, () => {})
     }
@@ -131,8 +149,6 @@ function fetch_text(url, opt) {
     let fetcherr = r => { if (r.ok) return r; throw new Error(r.status) }
     return fetch(url, opt).then(fetcherr).then( r => r.text())
 }
-
-function progname() { return path.basename(process.argv[1]); }
 
 function obj_filter(obj, keys) {
     return keys.reduce( (a, c) => { if (obj[c]) a[c] = obj[c]; return a }, {})

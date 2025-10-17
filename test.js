@@ -22,9 +22,4 @@ suite('smoke', function() {
     	let r = sh(adieu, ['no-such-file'])
 	assert(r.stderr.toString().match(/ENOENT/))
     })
-
-    test('invalid repl invocation', function() {
-    	let r = sh(adieu, [], { input: 'foo'})
-	assert(r.stderr.toString().match(/repl/))
-    })
 })

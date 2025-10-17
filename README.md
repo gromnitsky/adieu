@@ -8,12 +8,11 @@ $ adieu -h
 Usage: adieu [options] [file.html | URL]
 
 Options:
-  -V, --version           output the version number
-  -e, --eval <code>       JavaScript
-  -p, --print             automatically console.log results from -e
-  -r, --require <module>  preload a module (default: [])
-  -R, --raw               don't simplify cheerio objects printouts
-  -h, --help              output usage information
+ -e <code>      JavaScript to run after HTML is parsed.
+ -p             Automatically console.log results from -e.
+ -r <module>    Preload a module.
+ -R             Don't simplify cheerio objects printouts.
+ -V             Output the version number.
 ~~~
 
 Print all image urls from google's front page:

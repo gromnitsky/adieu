@@ -1,0 +1,13 @@
+Usage: adieu [options] [file.html | URL]
+
+Examples:
+  adieu https://google.com
+  adieu file.html
+  curl -sL https://google.com | adieu -pe '$("a").length'
+
+Options:
+ -e <code>      JavaScript to run after HTML is parsed.
+ -p             Automatically console.log results from -e.
+ -r <module>    Preload a module.
+ -R             Don't simplify cheerio objects printouts.
+ -V             Output the version number.
