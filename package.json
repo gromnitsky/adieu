@@ -10,10 +10,10 @@
     "license": "MIT",
     "repository": "github:gromnitsky/adieu",
     "files": [
-        "adieu"
+        "adieu.js"
     ],
     "bin": {
-        "adieu.js": "./adieu"
+        "adieu": "adieu.js"
     },
     "description": "A command line interface to cheerio library; vaguely similar to nokogiri",
     "keywords": [

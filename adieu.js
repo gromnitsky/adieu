@@ -11,10 +11,10 @@ function main() {
     let collect = (val, memo) => (memo.push(val), memo)
     cmd.version(meta.version)
 	.usage('[options] [file.html | URL]')
-	.option('-e, --eval <code>', 'JS')
-	.option('-p, --print', 'automatically console.log the result form -e')
+	.option('-e, --eval <code>', 'JavaScript')
+	.option('-p, --print', 'automatically console.log results from -e')
 	.option('-r, --require <module>', 'preload a module', collect, [])
-	.option('-R, --raw', "don't simplify printouts of cheerio/dom objects")
+	.option('-R, --raw', "don't simplify cheerio objects printouts")
 	.parse(process.argv)
 
     let src = cmd.args[0]
