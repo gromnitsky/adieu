@@ -43,7 +43,8 @@ async function parse(input) {
 	if (e instanceof TypeError) return read(input)
 	throw e
     })
-    return cheerio.load(await html)
+    // use htmlparser2 as in cheerio 1.0.0-rc.3
+    return cheerio.load(await html, {xml: {xmlMode: false}})
 }
 
 function read(file) {
@@ -70,18 +71,17 @@ function puts(str) { process.stdout.write(String(str) + "\n"); }
 
 function simplify($) {
     let util = require('util')
-    let adapter = require('parse5/lib/tree_adapters/htmlparser2') // FIXME
-    let comment = adapter.createCommentNode('ALL PRAISE JAVASCRIPT!')
-    let node_proto = Object.getPrototypeOf(comment)
     let html = nodes => {
 	let r = $(nodes).toString().replace(/\s+/g, ' ').trim()
 	let max = process.stdout.isTTY ? process.stdout.columns-25 : 55
 	return r.length <= max ? r : r.slice(0, max) + '…'
     }
 
-    let tag = (o, name, ctx) => Object.defineProperty(o, Symbol.toStringTag, { get() { return ctx.stylize(name, 'special') } })
+    let tag = (o, name, ctx) => Object.defineProperty(o, Symbol.toStringTag, {
+        get() { return ctx.stylize(name, 'special') }
+    })
 
-    node_proto[util.inspect.custom] = function(_, ctx) {
+    let klass_element = function(_, ctx) {
 	let compact = n => n ? obj_filter(n, ['type', 'name']) : null
 	let r = Object.assign(compact(this), {
 	    attribs: Object.assign({}, this.attribs),
@@ -90,14 +90,22 @@ function simplify($) {
 	    prev: compact(this.prev),
 	    next: compact(this.next),
 	})
-	return tag(r, 'Node', ctx)
+	return tag(r, 'Element', ctx)
     }
 
-    cheerio.prototype[util.inspect.custom] = function(_, ctx) {
-	let keys = Object.keys(this)
-	    .filter( k => k === 'length' || !isNaN(Number(k)))
-	return tag(obj_zip(keys, this), 'Cheerio', ctx)
+    let domhandler = require('domhandler')
+    domhandler.Element.prototype[util.inspect.custom] = klass_element
+
+    let klass_loadedcheerio = function(_, ctx) {
+        let number = n => !isNaN(Number(n))
+	let keys = Object.keys(this).filter( k => k === 'length' || number(k))
+        keys.forEach( k => {
+            if (number(k)) this[k][util.inspect.custom] = klass_element
+        })
+	return tag(obj_zip(keys, this), 'LoadedCheerio', ctx)
     }
+
+    $.prototype[util.inspect.custom] = klass_loadedcheerio
 }
 
 function evaluate(str, sandbox) {
