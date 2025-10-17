@@ -1,10 +1,10 @@
-#!/opt/bin/mocha --ui=tdd
+#!/usr/bin/env -S mocha --ui=tdd
 'use strict';
 
 let assert = require('assert')
 let sh = require('child_process').spawnSync
 
-let adieu = __dirname + '/adieu'
+let adieu = __dirname + '/adieu.js'
 
 suite('smoke', function() {
     test('h1', function() {

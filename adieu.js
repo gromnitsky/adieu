@@ -52,7 +52,7 @@ function read(file) {
     return new Promise( (resolve, reject) => {
 	stream.on('error', reject)
 	stream.on('data', chunk => data.push(chunk))
-	stream.on('end', () => resolve(data.join``))
+        stream.on('end', () => resolve(Buffer.concat(data)))
     })
 }
 
@@ -121,7 +121,7 @@ function irb(sandbox) {
 
 function fetch_text(url, opt) {
     let fetcherr = r => { if (r.ok) return r; throw new Error(r.status) }
-    return require('node-fetch')(url, opt).then(fetcherr).then( r => r.text())
+    return fetch(url, opt).then(fetcherr).then( r => r.text())
 }
 
 function progname() { return path.basename(process.argv[1]); }
