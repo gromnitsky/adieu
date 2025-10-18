@@ -9,7 +9,8 @@
     "license": "MIT",
     "repository": "github:gromnitsky/adieu",
     "files": [
-        "adieu.js"
+        "adieu.js",
+        "usage.txt"
     ],
     "bin": {
         "adieu": "adieu.js"
