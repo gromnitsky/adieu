@@ -10,6 +10,16 @@ let chunk1 = '<p>text</p><h1><b>big</b> title</h1>'
 let chunk2 = '<p>foo</p><p>bar</p>\n'
 
 suite('smoke', function() {
+    suiteSetup(function () {
+        this.tmp_dir = fs.mkdtempSync(__dirname + "/tmp.")
+        this.chunk1_file = this.tmp_dir + '/chunk1.html'
+        fs.writeFileSync(this.chunk1_file, chunk1)
+    })
+
+    suiteTeardown(function () {
+        fs.rmSync(this.tmp_dir, { recursive: true, force: true })
+    })
+
     test('usage', function() {
         let r = sh(adieu)
         assert.equal(r.stderr,
@@ -32,10 +42,7 @@ suite('smoke', function() {
     })
 
     test('extract text from file', function() {
-        using dir = fs.mkdtempDisposableSync(__dirname + "/tmp.")
-        let file = dir.path + '/chunk1.html'
-        fs.writeFileSync(file, chunk1)
-        let r = sh(adieu, ['-pe', '$("h1").text()', file])
+        let r = sh(adieu, ['-pe', '$("h1").text()', this.chunk1_file])
         assert.equal(r.stdout, "big title\n")
     })
 
