@@ -5,7 +5,7 @@ let fs = require('fs')
 let path = require('path')
 let util = require('util')
 let meta = require('./package.json')
-let cheerio = require('cheerio')
+let cheerio = require('cheerio/slim') // use htmlparser2
 
 // (1) if no args, print usage
 // (2) if no -e, start repl
@@ -117,9 +117,6 @@ function simplify($) {
     let klass_loadedcheerio = function(_, ctx) {
         let number = n => !isNaN(Number(n))
 	let keys = Object.keys(this).filter( k => k === 'length' || number(k))
-        keys.forEach( k => {
-            if (number(k)) this[k][util.inspect.custom] = klass_element
-        })
 	return tag(obj_zip(keys, this), 'LoadedCheerio', ctx)
     }
 

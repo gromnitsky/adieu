@@ -2,15 +2,18 @@
 'use strict';
 
 let assert = require('assert')
+let fs = require('fs')
 let sh = require('child_process').spawnSync
 
 let adieu = __dirname + '/adieu.js'
+let chunk1 = '<p>text</p><h1><b>big</b> title</h1>'
+let chunk2 = '<p>foo</p><p>bar</p>\n'
 
 suite('smoke', function() {
-    test('h1', function() {
-	let input = '<p>text</p><h1><b>big</b> title</h1>'
-	let r = sh(adieu, ['-pe', '$("h1").text()'], {input})
-	assert.equal(r.stdout, "big title\n")
+    test('usage', function() {
+        let r = sh(adieu)
+        assert.equal(r.stderr,
+                     fs.readFileSync(__dirname + '/usage.txt').toString())
     })
 
     test('404', function() {
@@ -22,4 +25,58 @@ suite('smoke', function() {
     	let r = sh(adieu, ['no-such-file'])
 	assert(r.stderr.toString().match(/ENOENT/))
     })
+
+    test('extract text from stdin', function() {
+        let r = sh(adieu, ['-pe', '$("h1").text()'], {input: chunk1})
+        assert.equal(r.stdout, "big title\n")
+    })
+
+    test('extract text from file', function() {
+        using dir = fs.mkdtempDisposableSync(__dirname + "/tmp.")
+        let file = dir.path + '/chunk1.html'
+        fs.writeFileSync(file, chunk1)
+        let r = sh(adieu, ['-pe', '$("h1").text()', file])
+        assert.equal(r.stdout, "big title\n")
+    })
+
+    test('prettify LoadedCheerio', function() {
+        let r = sh(adieu, ['-pe', '$("p")'], {input: chunk2})
+        assert.equal(r.stdout.toString(), `Object [LoadedCheerio] {
+  '0': Object [Element] {
+    type: 'tag',
+    name: 'p',
+    attribs: {},
+    '[inner_html]': 'foo',
+    parent: { type: 'root' },
+    prev: null,
+    next: { type: 'tag', name: 'p' }
+  },
+  '1': Object [Element] {
+    type: 'tag',
+    name: 'p',
+    attribs: {},
+    '[inner_html]': 'bar',
+    parent: { type: 'root' },
+    prev: { type: 'tag', name: 'p' },
+    next: { type: 'text' }
+  },
+  length: 2
+}
+`)
+    })
+
+    test('prettify Element', function() {
+        let r = sh(adieu, ['-pe', '$("p")[0]'], {input: chunk2})
+        assert.equal(r.stdout.toString(), `Object [Element] {
+  type: 'tag',
+  name: 'p',
+  attribs: {},
+  '[inner_html]': 'foo',
+  parent: { type: 'root' },
+  prev: null,
+  next: { type: 'tag', name: 'p' }
+}
+`)
+    })
+
 })
